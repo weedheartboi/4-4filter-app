@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4/4 Filter Betting Manager</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 16px; }
+        .container { max-width: 600px; margin: 0 auto; background: #1e293b; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        h1 { font-size: 1.5rem; text-align: center; color: #38bdf8; margin-bottom: 8px; }
+        .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+        .stat-card { background: #334155; padding: 12px; border-radius: 8px; text-align: center; }
+        .stat-card span { display: block; font-size: 0.85rem; color: #94a3b8; }
+        .stat-card strong { font-size: 1.2rem; color: #f1f5f9; }
+        .race-card { background: #334155; padding: 14px; border-radius: 8px; margin-bottom: 12px; border-left: 4px solid #38bdf8; }
+        .btn-group { display: flex; gap: 6px; margin-top: 10px; }
+        button { flex: 1; padding: 8px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.85rem; }
+        .btn-win { background: #22c55e; color: white; }
+        .btn-place { background: #3b82f6; color: white; }
+        .btn-loss { background: #ef4444; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>4/4 Filter Manager</h1>
+        <p style="text-align:center; color:#94a3b8; font-size:0.9rem; margin-top:0;">Strategy: Greyhounds (1-2) | Horses (1-4)</p>
+        
+        <div class="stats">
+            <div class="stat-card"><span>Bankroll</span><strong id="bankroll">$300.00</strong></div>
+            <div class="stat-card"><span>Outlay</span><strong id="outlay">$0.00</strong></div>
+            <div class="stat-card"><span>Return</span><strong id="return">$0.00</strong></div>
+        </div>
+
+        <div id="races-container">
+            <div class="race-card">
+                <strong>The Meadows R1 - Box 1</strong>
+                <p style="margin:6px 0; font-size:0.9rem; color:#cbd5e1;">Insomniac ($3 Flat: $1W / $2P)</p>
+                <div class="btn-group">
+                    <button class="btn-win" onclick="recordResult(2.60, 1.40)">Win ($5.40)</button>
+                    <button class="btn-place" onclick="recordResult(0, 1.40)">Place ($2.70)</button>
+                    <button class="btn-loss" onclick="recordResult(0, 0)">Loss ($0)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let bankroll = 300.00;
+        let totalOutlay = 0.00;
+        let totalReturn = 0.00;
+
+        function recordResult(winDiv, placeDiv) {
+            totalOutlay += 3.00;
+            let ret = winDiv + placeDiv;
+            totalReturn += ret;
+            bankroll = 300.00 - totalOutlay + totalReturn;
+
+            document.getElementById('bankroll').innerText = '$' + bankroll.toFixed(2);
+            document.getElementById('outlay').innerText = '$' + totalOutlay.toFixed(2);
+            document.getElementById('return').innerText = '$' + totalReturn.toFixed(2);
+            alert('Recorded! Return: $' + ret.toFixed(2));
+        }
+    </script>
+</body>
+</html>
