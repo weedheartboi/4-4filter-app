@@ -1,0 +1,59 @@
+const https = require('https');
+
+exports.handler = async function(event, context) {
+    // Example endpoint fetching public racing payload
+    const API_URL = "https://api.theracingapi.com/v1/racecards/free"; 
+
+    try {
+        // Fetch raw live race cards
+        const rawData = await new Promise((resolve, reject) => {
+            https.get(API_URL, (res) => {
+                let data = '';
+                res.on('data', chunk => data += chunk);
+                res.on('end', () => resolve(data));
+            }).on('error', reject);
+        });
+
+        const parsed = JSON.parse(rawData);
+        
+        // Apply 4/4 Filter logic
+        const filteredPicks = [];
+        
+        if (parsed && parsed.races) {
+            parsed.races.forEach(race => {
+                const isGreyhound = race.type === 'Greyhound';
+                const isHorse = race.type === 'Thoroughbred' || race.type === 'Horse';
+
+                race.runners.forEach(runner => {
+                    const box = parseInt(runner.box_number || runner.barrier);
+                    
+                    // Filter: Boxes 1-2 for Dogs | Barriers 1-4 for Horses
+                    if ((isGreyhound && box >= 1 && box <= 2) || (isHorse && box >= 1 && box <= 4)) {
+                        filteredPicks.push({
+                            id: race.race_id + '_' + runner.runner_number,
+                            venue: race.meeting_name + " R" + race.race_number,
+                            type: isGreyhound ? 'Greyhound' : 'Horse',
+                            draw: isGreyhound ? `Box ${box}` : `Barrier ${box}`,
+                            runner: runner.runner_name,
+                            startTime: race.advertised_start,
+                            odds: runner.fixed_odds || "2.50",
+                            status: runner.result ? 'Settled' : 'Pending',
+                            outcome: runner.finish_position === 1 ? 'WIN' : (runner.finish_position <= 3 ? 'PLACE' : 'LOSS')
+                        });
+                    }
+                });
+            });
+        }
+
+        return {
+            statusCode: 200,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ picks: filteredPicks })
+        };
+    } catch (err) {
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: "Failed to fetch live race feeds", details: err.message })
+        };
+    }
+};
