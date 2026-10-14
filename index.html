@@ -5,25 +5,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>4/4 Filter Betting Manager</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 16px; }
-        .container { max-width: 600px; margin: 0 auto; background: #1e293b; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        h1 { font-size: 1.5rem; text-align: center; color: #38bdf8; margin-bottom: 8px; }
-        .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
-        .stat-card { background: #334155; padding: 12px; border-radius: 8px; text-align: center; }
-        .stat-card span { display: block; font-size: 0.85rem; color: #94a3b8; }
-        .stat-card strong { font-size: 1.2rem; color: #f1f5f9; }
-        .race-card { background: #334155; padding: 14px; border-radius: 8px; margin-bottom: 12px; border-left: 4px solid #38bdf8; }
-        .btn-group { display: flex; gap: 6px; margin-top: 10px; }
-        button { flex: 1; padding: 8px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.85rem; }
-        .btn-win { background: #22c55e; color: white; }
-        .btn-place { background: #3b82f6; color: white; }
-        .btn-loss { background: #ef4444; color: white; }
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --sub-card: #334155;
+            --accent: #38bdf8;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #22c55e;
+            --place: #3b82f6;
+            --danger: #ef4444;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-color); color: var(--text-main); margin: 0; padding: 12px; }
+        .container { max-width: 600px; margin: 0 auto; background: var(--card-bg); padding: 16px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        h1 { font-size: 1.4rem; text-align: center; color: var(--accent); margin: 0 0 4px 0; }
+        .subtitle { text-align: center; color: var(--text-muted); font-size: 0.8rem; margin-bottom: 14px; }
+        
+        .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+        .stat-card { background: var(--sub-card); padding: 10px; border-radius: 8px; text-align: center; }
+        .stat-card span { display: block; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; }
+        .stat-card strong { font-size: 1.1rem; color: var(--text-main); }
+        
+        .race-card { background: var(--sub-card); padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid var(--accent); }
+        .race-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .race-title { font-weight: bold; font-size: 0.95rem; }
+        .runner-info { font-size: 0.85rem; color: #cbd5e1; margin-bottom: 8px; }
+        
+        .btn-group { display: flex; gap: 6px; }
+        button { flex: 1; padding: 7px 4px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.75rem; color: white; }
+        .btn-win { background: var(--success); }
+        .btn-place { background: var(--place); }
+        .btn-loss { background: var(--danger); }
+        .status-badge { font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+        .status-pending { background: #475569; color: #cbd5e1; }
+        .status-settled { background: #065f46; color: #6ee7b7; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>4/4 Filter Manager</h1>
-        <p style="text-align:center; color:#94a3b8; font-size:0.9rem; margin-top:0;">Strategy: Greyhounds (1-2) | Horses (1-4)</p>
+        <div class="subtitle">Strategy: Greyhounds (Boxes 1-2) | Horses (Barriers 1-4)</div>
         
         <div class="stats">
             <div class="stat-card"><span>Bankroll</span><strong id="bankroll">$300.00</strong></div>
@@ -31,35 +52,86 @@
             <div class="stat-card"><span>Return</span><strong id="return">$0.00</strong></div>
         </div>
 
-        <div id="races-container">
-            <div class="race-card">
-                <strong>The Meadows R1 - Box 1</strong>
-                <p style="margin:6px 0; font-size:0.9rem; color:#cbd5e1;">Insomniac ($3 Flat: $1W / $2P)</p>
-                <div class="btn-group">
-                    <button class="btn-win" onclick="recordResult(2.60, 1.40)">Win ($5.40)</button>
-                    <button class="btn-place" onclick="recordResult(0, 1.40)">Place ($2.70)</button>
-                    <button class="btn-loss" onclick="recordResult(0, 0)">Loss ($0)</button>
-                </div>
-            </div>
-        </div>
+        <div id="races-container"></div>
     </div>
 
     <script>
-        let bankroll = 300.00;
+        const startingBankroll = 300.00;
         let totalOutlay = 0.00;
         let totalReturn = 0.00;
 
-        function recordResult(winDiv, placeDiv) {
-            totalOutlay += 3.00;
-            let ret = winDiv + placeDiv;
-            totalReturn += ret;
-            bankroll = 300.00 - totalOutlay + totalReturn;
+        const races = [
+            { id: 1, venue: "Capalaba R2", type: "Greyhound", draw: "Box 1", runner: "Inside Runner", status: "Pending" },
+            { id: 2, venue: "The Meadows R1", type: "Greyhound", draw: "Box 2", runner: "Insomniac", status: "Pending" },
+            { id: 3, venue: "The Meadows R4", type: "Greyhound", draw: "Box 1", runner: "Speed Dart", status: "Pending" },
+            { id: 4, venue: "Sandown Park R3", type: "Greyhound", draw: "Box 2", runner: "Shadow Blue", status: "Pending" },
+            { id: 5, venue: "Flemington R2", type: "Horse", draw: "Barrier 3", runner: "First Line", status: "Pending" },
+            { id: 6, venue: "Flemington R5", type: "Horse", draw: "Barrier 1", runner: "Rails Run", status: "Pending" },
+            { id: 7, venue: "Randwick R3", type: "Horse", draw: "Barrier 4", runner: "Gate Keeper", status: "Pending" },
+            { id: 8, venue: "Randwick R6", type: "Horse", draw: "Barrier 2", runner: "Inner Curve", status: "Pending" },
+            { id: 9, venue: "Albion Park R7", type: "Greyhound", draw: "Box 1", runner: "Quick Start", status: "Pending" },
+            { id: 10, venue: "Wenty Park R8", type: "Greyhound", draw: "Box 2", runner: "Local Hero", status: "Pending" }
+        ];
 
-            document.getElementById('bankroll').innerText = '$' + bankroll.toFixed(2);
+        function renderRaces() {
+            const container = document.getElementById('races-container');
+            container.innerHTML = '';
+            
+            races.forEach((race, index) => {
+                let badge = race.status === 'Pending' 
+                    ? `<span class="status-badge status-pending">Pending</span>` 
+                    : `<span class="status-badge status-settled">Settled</span>`;
+
+                container.innerHTML += `
+                    <div class="race-card">
+                        <div class="race-header">
+                            <span class="race-title">${race.venue} (${race.type})</span>
+                            ${badge}
+                        </div>
+                        <div class="runner-info">Selection: <strong>${race.draw}</strong> - ${race.runner} ($3 Flat: $1W / $2P)</div>
+                        <div class="btn-group">
+                            <button class="btn-win" onclick="recordResult(${index}, 'win')">Win</button>
+                            <button class="btn-place" onclick="recordResult(${index}, 'place')">Place</button>
+                            <button class="btn-loss" onclick="recordResult(${index}, 'loss')">Loss</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function recordResult(index, outcome) {
+            if (races[index].status === 'Settled') {
+                alert('This race has already been settled!');
+                return;
+            }
+
+            totalOutlay += 3.00;
+            let ret = 0;
+
+            if (outcome === 'win') {
+                let winDiv = prompt("Enter Win Dividend (e.g., 2.50):", "2.50");
+                let placeDiv = prompt("Enter Place Dividend (e.g., 1.30):", "1.30");
+                ret = (parseFloat(winDiv) || 0) + (parseFloat(placeDiv) || 0);
+            } else if (outcome === 'place') {
+                let placeDiv = prompt("Enter Place Dividend (e.g., 1.40):", "1.40");
+                ret = parseFloat(placeDiv) || 0;
+            } else {
+                ret = 0;
+            }
+
+            totalReturn += ret;
+            races[index].status = 'Settled';
+
+            let currentBankroll = startingBankroll - totalOutlay + totalReturn;
+
+            document.getElementById('bankroll').innerText = '$' + currentBankroll.toFixed(2);
             document.getElementById('outlay').innerText = '$' + totalOutlay.toFixed(2);
             document.getElementById('return').innerText = '$' + totalReturn.toFixed(2);
-            alert('Recorded! Return: $' + ret.toFixed(2));
+            
+            renderRaces();
         }
+
+        renderRaces();
     </script>
 </body>
 </html>
